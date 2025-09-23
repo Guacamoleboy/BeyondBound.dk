@@ -5,6 +5,7 @@ const startZoom = document.getElementById('startZoom');
 const zoomValue = document.getElementById('zoomValue');
 const loginOverlay = document.getElementById('loginOverlay');
 const createOverlay = document.getElementById('createOverlay');
+const loginButton = document.getElementById('loginButton');
 const createAccountButton = document.getElementById('createAccountButton');
 const backToLoginButton = document.getElementById('backToLoginButton');
 
@@ -22,10 +23,6 @@ startZoom.addEventListener('input', () => {
     zoomValue.textContent = startZoom.value;
 });
 
-loginButton.addEventListener('click', () => {
-    loginOverlay.style.display = 'none';
-});
-
 loginOverlay.style.display = 'flex';
 createOverlay.style.display = 'none';
 
@@ -37,4 +34,47 @@ createAccountButton.addEventListener('click', () => {
 backToLoginButton.addEventListener('click', () => {
     createOverlay.style.display = 'none';
     loginOverlay.style.display = 'flex';
+});
+
+loginButton.addEventListener('click', async (e) => {
+    e.preventDefault();
+
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+
+    console.log("Username:", username);
+    console.log("Password:", password);
+
+    const formData = new FormData();
+    formData.append('username', username);
+    formData.append('password', password);
+
+    try {
+        const response = await fetch('php/login.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        const text = await response.text();
+        console.log("Raw response from PHP:", text);
+
+        let result;
+        try {
+            result = JSON.parse(text);
+        } catch (err) {
+            console.error("JSON parse error:", err);
+            showNotification("Server returned invalid response", "danger");
+            return;
+        }
+
+        if (result.success) {
+            loginOverlay.style.display = 'none';
+            showNotification("Login success!", "success");
+        } else {
+            showNotification(result.message || "Wrong credentials", "danger");
+        }
+    } catch (err) {
+        console.error("Request failed:", err);
+        showNotification("Login request failed", "danger");
+    }
 });
