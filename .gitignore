@@ -1,0 +1,16 @@
+# Ignore all PHP files
+*.php
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node modules if applicable
+/node_modules/
+
+# Logs / temp
+*.log
+*.tmp
+
+# Env files
+.env
