@@ -1,5 +1,6 @@
 # Ignore all PHP files
 *.php
+*.sql
 
 # OS files
 .DS_Store

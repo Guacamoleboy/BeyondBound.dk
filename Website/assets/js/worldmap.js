@@ -5,16 +5,32 @@
 
 const map = L.map('map', {
     center: [56.2639, 9.5018], // Denmark Location
-    zoom: 5, // Initial zoom on spawn
-    minZoom: 3, // Just enough to not mess with edge
-    maxZoom: 10 // To avoid people zooming all the way in. No need to do such a thing!!
+    zoom: 4, // Initial Zoom
+    minZoom: 3, // Min Zoome
+    maxZoom: 10, // Max Zoom
+    maxBounds: [[-90, -180], [90, 180]], // South / North Poles 
+    maxBoundsViscosity: 1.0 // Can't exit map
 });
 
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-    attribution: 'BeyondBorders | Build: 0.0.1',
+    attribution: 'BeyondBorders | Build: 0.0.2',
     subdomains: 'abcd',
-    maxZoom: 10 // Same as first maxZoom
+    maxZoom: 10
 }).addTo(map);
+
+/* ______________________________________ */ 
+
+              // Visuals       
+/* ______________________________________ */
+
+const redIcon = L.icon({
+    iconUrl: 'https://cdn.rawgit.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+    iconSize: [25, 41], 
+    iconAnchor: [12, 41], 
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+});
 
 /* ______________________________________ */ 
 
@@ -41,11 +57,10 @@ eraserButton.addEventListener('click', () => setActive(eraserButton, 'erase'));
 
 /* ______________________________________ */ 
 
-           // Button handle       
+            // Button handle       
 /* ______________________________________ */
 
 function setActive(button, mode) {
-    
     if (activeButton && activeButton !== button) {
         activeButton.classList.remove('active');
     }
@@ -65,44 +80,43 @@ function setActive(button, mode) {
 
 /* ______________________________________ */ 
 
-         // Load Markers (for now)      
-/* ______________________________________ */
+         // Load Markers from server
+/* ______________________________________ */ 
 
-function loadMarkers() {
-    const saved = localStorage.getItem('markers');
-    if (!saved) return;
+async function loadMarkers() {
+    if (!loggedInUser) return; 
 
-    const savedMarkers = JSON.parse(saved);
-    savedMarkers.forEach(pos => {
-        const marker = L.marker([pos.lat, pos.lng]).addTo(map);
-        markers.push(marker);
-    });
+    try {
+        const res = await fetch('php/get_pins.php', { 
+            credentials: 'same-origin'
+        }); 
+        const pins = await res.json();
+
+        pins.forEach(pin => {
+            const marker = L.marker([pin.lat, pin.lng], { icon: redIcon }).addTo(map);
+            markers.push({ marker, id: pin.id }); 
+        });
+    } catch (err) {
+        console.error('Fejl ved load af pins:', err);
+    }
 }
 
 /* ______________________________________ */ 
 
-         // Save Markers (for now)      
+                // Click    
 /* ______________________________________ */ 
 
-function saveMarkers() {
-    const data = markers.map(marker => {
-        const latlng = marker.getLatLng();
-        return { lat: latlng.lat, lng: latlng.lng };
-    });
-    localStorage.setItem('markers', JSON.stringify(data));
-}
+map.on('click', async function(e) {
+    if (!loggedInUser) {
+        showNotification("Du skal være logget ind for at tilføje pins!", "danger");
+        return;
+    }
 
-/* ______________________________________ */ 
-
-                // Clicking      
-/* ______________________________________ */ 
-
-map.on('click', function(e) {
     const clickLatLng = e.latlng;
 
     if (pinMode) {
-        let tooClose = markers.some(marker => {
-            const distance = map.latLngToContainerPoint(marker.getLatLng())
+        let tooClose = markers.some(m => {
+            const distance = map.latLngToContainerPoint(m.marker.getLatLng())
                                .distanceTo(map.latLngToContainerPoint(clickLatLng));
             return distance < MIN_DISTANCE;
         });
@@ -112,27 +126,75 @@ map.on('click', function(e) {
             return;
         }
 
-        // Add marker if left is being clicked
-        const marker = L.marker(clickLatLng).addTo(map);
-        markers.push(marker);
+        const marker = L.marker(clickLatLng, { icon: redIcon }).addTo(map);
+        markers.push({ marker, id: null });
 
-        // LocalStorage (for now)
-        saveMarkers();
+        // Save pin to database
+        try {
+            const res = await fetch('php/save_pin.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    lat: clickLatLng.lat,
+                    lng: clickLatLng.lng,
+                    label: 'NULL'
+                }),
+                credentials: 'same-origin'
+            });
+
+            const text = await res.text();
+            console.log("Raw response from PHP:", text);
+
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch(err) {
+                console.error("Fejl ved parsing af JSON:", err);
+                return;
+            }
+
+            if (data.id) {
+                markers[markers.length - 1].id = data.id;
+            } else {
+                console.error("Pin blev ikke gemt:", data);
+            }
+        } catch (err) {
+            console.error("Fejl ved gem pin:", err);
+        }
 
     } else if (eraseMode) {
         for (let i = markers.length - 1; i >= 0; i--) {
-            const marker = markers[i];
-            const distance = map.latLngToContainerPoint(marker.getLatLng())
+            const m = markers[i];
+            const distance = map.latLngToContainerPoint(m.marker.getLatLng())
                                .distanceTo(map.latLngToContainerPoint(clickLatLng));
 
             if (distance <= HIT_RADIUS) {
-                map.removeLayer(marker);
+                map.removeLayer(m.marker);
+
+                if (m.id) {
+                fetch('php/delete_pin.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: m.id }),
+                    credentials: 'same-origin'
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log('Pin slettet fra DB');
+                    } else {
+                        console.error('Fejl ved slet pin:', data);
+                    }
+                })
+                .catch(err => console.error('Fejl ved slet pin:', err));
+            }
+
                 markers.splice(i, 1);
-                saveMarkers(); // LocalStorage (for now)
+
             }
         }
     }
 });
 
-// LocalStorage Run (For now)
+// Load pins on start
 loadMarkers();

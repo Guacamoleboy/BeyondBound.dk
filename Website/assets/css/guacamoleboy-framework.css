@@ -1377,3 +1377,18 @@ li {
 .guac-notification-danger  { background-color: var(--guac-danger); }
 .guac-notification-warning { background-color: var(--guac-warning); color: var(--guac-black); }
 .guac-notification-info    { background-color: var(--guac-info); }
+
+@media screen and (min-width: 768px) and (max-width: 1024px) {
+    
+    #guac-notification-container {
+        top: 1rem !important;   
+        bottom: auto !important; 
+        right: 1rem !important;  
+        left: auto !important;   
+    }
+
+    #guac-notification-container .guac-notification {
+        transform: translateX(0) !important;
+    }
+
+}

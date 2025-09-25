@@ -1,13 +1,17 @@
-const settingsButton = document.getElementById('settingsButton');
-const settingsOverlay = document.getElementById('settingsOverlay');
-const closeOverlay = document.getElementById('closeOverlay');
 const startZoom = document.getElementById('startZoom');
 const zoomValue = document.getElementById('zoomValue');
+
+const settingsOverlay = document.getElementById('settingsOverlay');
+const closeOverlay = document.getElementById('closeOverlay');
 const loginOverlay = document.getElementById('loginOverlay');
 const createOverlay = document.getElementById('createOverlay');
+
+const settingsButton = document.getElementById('settingsButton');
 const loginButton = document.getElementById('loginButton');
 const createAccountButton = document.getElementById('createAccountButton');
 const backToLoginButton = document.getElementById('backToLoginButton');
+const createButton = document.getElementById('createButton');
+const logoutButton = document.getElementById('logoutButton');
 
 settingsButton.addEventListener('click', (e) => {
     e.preventDefault();
@@ -34,6 +38,61 @@ createAccountButton.addEventListener('click', () => {
 backToLoginButton.addEventListener('click', () => {
     createOverlay.style.display = 'none';
     loginOverlay.style.display = 'flex';
+});
+
+createButton.addEventListener('click', async (e) => {
+    e.preventDefault();
+
+    const newUsername = document.getElementById('newUsername').value.trim();
+    const newPassword = document.getElementById('newPassword').value.trim();
+    const confirmPassword = document.getElementById('confirmPassword').value.trim();
+    const newEmail = document.getElementById('newEmail').value.trim();
+
+    if (!newUsername || !newPassword || !confirmPassword || !newEmail) {
+        showNotification("Alle felter skal udfyldes", "danger");
+        return;
+    }
+
+    if (newPassword !== confirmPassword) {
+        showNotification("Passwords matcher ikke", "danger");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('newUsername', newUsername);
+    formData.append('newPassword', newPassword);
+    formData.append('confirmPassword', confirmPassword);
+    formData.append('newEmail', newEmail);
+
+    try {
+        const response = await fetch('php/register.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        const text = await response.text();
+        console.log("Raw response from register.php:", text);
+
+        let result;
+        try {
+            result = JSON.parse(text);
+        } catch (err) {
+            console.error("JSON parse error:", err);
+            showNotification("Server returned invalid response", "danger");
+            return;
+        }
+
+        if (result.success) {
+            showNotification("Konto oprettet! Du kan nu logge ind.", "success");
+            createOverlay.style.display = 'none';
+            loginOverlay.style.display = 'flex';
+        } else {
+            showNotification(result.message || "Kunne ikke oprette konto", "danger");
+        }
+    } catch (err) {
+        console.error("Request failed:", err);
+        showNotification("Create Account request failed", "danger");
+    }
 });
 
 loginButton.addEventListener('click', async (e) => {
@@ -68,13 +127,48 @@ loginButton.addEventListener('click', async (e) => {
         }
 
         if (result.success) {
+            loggedInUser = result.username;
+
             loginOverlay.style.display = 'none';
             showNotification("Login success!", "success");
-        } else {
+
+            loadMarkers();
+        }
+        else {
             showNotification(result.message || "Wrong credentials", "danger");
         }
     } catch (err) {
         console.error("Request failed:", err);
         showNotification("Login request failed", "danger");
+    }
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+    if (typeof loggedInUser !== "undefined" && loggedInUser) {
+        showNotification(`Welcome back, ${loggedInUser}!`, "success");
+        loginOverlay.style.display = 'none';
+        createOverlay.style.display = 'none';
+    }
+});
+
+logoutButton.addEventListener('click', async () => {
+    try {
+        const response = await fetch('php/logout.php', {
+            method: 'POST',
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showNotification("You have been logged out", "success");
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+        } else {
+            showNotification("Logout failed", "danger");
+        }
+    } catch (err) {
+        console.error("Logout request failed:", err);
+        showNotification("Logout request failed", "danger");
     }
 });

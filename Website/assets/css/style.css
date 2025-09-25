@@ -35,7 +35,7 @@
 }
 
 .guac-navbar-bottom-right {
-  left: 65%;
+  left: 63%;
   transform: translateX(-50%);
 }
 
@@ -106,10 +106,54 @@
     flex-direction: column;
     align-items: center;
     gap: 0.5rem;
+    position: relative;
+    padding: 0.5rem 0;
+}
+
+.setting-item .guac-btn-orange {
+    font-weight: bold !important;
+    color: #272727 !important;
+    transition: transform 0.2s ease-in-out;
+}
+
+.setting-item .guac-btn-orange:hover {
+    font-weight: bold !important;
+    color: #131313 !important;
+    transform: scale(1.05);
+}
+
+.setting-item .change-buttons {
+    display: flex;
+    gap: 0.5rem; 
+    justify-content: center; 
+    transition: transform 0.2s ease-in-out;
+}
+
+.setting-item .change-buttons button {
+    padding: 0.4rem 0.8rem;
+}
+
+.setting-item::before {
+    content: '';
+    display: block;
+    width: 25%;             
+    border-top: 2px dashed rgba(255, 255, 255, 0.2); 
+    margin: 0 0 0.5rem 0;    
+}
+
+.setting-item .change-buttons button:hover {
+    transform: scale(1.05);
+}
+
+.setting-item.no-line::before {
+    content: none !important;
 }
 
 .setting-item label {
     font-weight: bold;
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;   
+    display: block;       
     color: #fff;
 }
 
@@ -129,7 +173,7 @@
     -moz-appearance: none;   
     appearance: none;        
     background-image: none;   
-    width: 80%;
+    width: 40%;
     padding: 0.3rem 0.5rem;
     border-radius: 6px;
     border: none;
@@ -179,7 +223,7 @@
 
 .exit-btn:hover {
     background-color: #f8b600 !important;
-    color: #f8b600 !important;
+    color: #3b3b3b !important;
     transform: scale(1.1) !important;
 }
 
@@ -217,7 +261,7 @@
 }
 
 #eraserButton.active i.fa {
-    color: orange !important;
+    color: red !important;
     transform: scale(1.2);
 }
 
@@ -263,11 +307,6 @@
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(2px);
     transition: transform 0.3s ease;
-}
-
-.login-content:hover,
-.login-content:focus-within {
-    transform: scale(1.05);
 }
 
 .login-field {
@@ -353,4 +392,28 @@
     justify-content: center;
     z-index: 3000;
     display: none;
+}
+
+/* ______________________________________________ */
+
+			 /* Responsive Tablet */
+/* ______________________________________________ */
+
+@media screen and (max-width: 1024px) {
+    .guac-navbar-bottom-right {
+        gap: 0.7rem;
+        left: 75%;          
+        transform: translateX(-50%);
+    }
+
+    .guac-navbar-bottom-left {
+        gap: 0.7rem;
+        left: 10%;         
+        transform: translateX(-50%);
+    }
+
+    .guac-navbar-bottom-left a,
+    .guac-navbar-bottom-right a {
+        font-size: 1rem; 
+    }
 }
